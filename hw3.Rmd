@@ -1,0 +1,256 @@
+---
+title: "p8105_hw3_yj2579"
+author: "Yingxi Ji"
+date: "10/7/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+library( ggridges)
+library(gridExtra)
+```
+
+# Problem 1 
+```{r}
+# Load the data
+library(p8105.datasets)
+data("instacart")
+data("brfss_smart2010")
+```
+
+## Part 1 
+The 'aisle' is ranged from 0-135, so there are 135 different aisles. And aisle 83 is odered the most. 
+
+```{r}
+# Find the max by counting number of each aisle group. 
+aisle_fre = 
+  instacart  %>%
+  group_by(aisle_id) %>% 
+  count()
+aisle_fre[which.max(aisle_fre$n),1]
+
+```
+## Part 2
+```{r}
+# Showing the aisle with more the 10000 orders. 
+aisle_more = 
+  instacart %>% 
+  group_by(aisle) %>% 
+  count() %>% 
+  filter(n>10000)
+# Make a readable plot 
+ggplot(aisle_more,aes(x=aisle, y=n, fill = 1))+
+  geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+## Part 3 
+```{r}
+# if doing the following, I got three subset and combine them altogether to make a table, but redundent. 
+
+# packed_vege = instacart %>% 
+#   filter(aisle=="packaged vegetables fruits") %>% 
+#   group_by(product_name) %>% 
+#   count() %>% 
+#   arrange(desc(n))%>% 
+#   head(3)
+# 
+# baking = instacart %>% 
+#   filter(aisle=="baking ingredients") %>% 
+#   group_by(product_name) %>% 
+#   count() %>% 
+#   arrange(desc(n))%>% 
+#   head(3)
+# 
+# dog_food = instacart %>% 
+#   filter(aisle=="dog food care") %>% 
+#   group_by(product_name) %>% 
+#   count() %>% 
+#   arrange(desc(n))%>% 
+#   head(3)
+# 
+# total = rbind(dog_food, baking, packed_vege)
+
+# Then I doing all the three subset in one set by filtering the three. 
+
+top_3 = 
+  instacart %>%
+  filter(aisle %in% c('baking ingredients', 'dog food care', 'packaged vegetables fruits')) %>% 
+  group_by(aisle, product_name) %>% 
+  count()  %>% 
+  arrange(aisle, desc(n)) %>% 
+  group_by(aisle) %>%  
+  top_n(3)
+```
+
+## Part 4 
+```{r}
+# Make two subset and find the mean
+apple = instacart %>%
+  filter(product_name %like% "Pink Lady Apples") %>% 
+  group_by(order_dow) %>% 
+  summarise(mean_hour = mean(order_hour_of_day)) %>% 
+  mutate(product = "Pink Lady Apples")
+
+ice_cream = instacart %>%
+  filter(product_name %like% "Coffee Ice Cream") %>% 
+  group_by(order_dow) %>% 
+  summarise(mean_hour = mean(order_hour_of_day)) %>% 
+  mutate(product = "Coffee Ice Cream")
+
+# combine the mean
+mean_hour_two_product = rbind(apple, ice_cream)
+# make a table 
+mean_hour_table = 
+  pivot_wider(
+  mean_hour_two_product,
+  id_cols = "product",
+  names_from = "order_dow",
+  values_from = "mean_hour"
+)
+
+```
+
+# Problem 2 
+## Part 1 
+
+```{r}
+# Take out of the main data that we focused. 
+# Then define levels.
+over_health = 
+brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  filter(topic == "Overall Health") %>% 
+  mutate(response = factor(response, order = "TRUE", 
+                    levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))) %>% arrange(response)
+
+  
+```
+
+## Part 2
+There are 6 states have more than 7 location in 2002
+
+There are 14 states have more than 7 location in 2010
+
+```{r}
+# In 2002, find states were observed at 7 or more locations. 
+# and that in 2010
+
+brfss_2002 = 
+  over_health %>% 
+  filter(year == "2002") %>% 
+  group_by(locationabbr) %>% 
+  count() %>% 
+  filter(n/5 >=7) %>% 
+  arrange(desc(n))
+
+brfss_2010 = 
+  over_health %>% 
+  filter(year == "2010") %>% 
+  group_by(locationabbr) %>% 
+  count() %>% 
+  filter(n/5 >= 7) %>% 
+  arrange(desc(n))
+
+## there are 6 states have more than 7 location in 2002
+## there are 14 states have more than 7 location in 2010
+
+
+#Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state.
+
+brfss_excellent = 
+   over_health %>% 
+  filter(response == 'Excellent') %>% 
+  group_by(year, locationabbr) %>% 
+  summarise(avg = mean(data_value)) %>% 
+  `colnames<-`(c("year", "state", "avg")) 
+
+# Make a “spaghetti” plot of this average value over time within a state
+ggplot(brfss_excellent, aes(x = year, y = avg, color = state )) + geom_line()
+
+    
+# Below is my first attemp. However, this is not a 2-panel table. It is a 2-table cobined. 
+
+# brfss_NY_2006 = 
+#   over_health %>% 
+#   filter(year == '2006', locationabbr == "NY") 
+# 
+# p1 = ggplot(brfss_NY_2006,aes(x=response, y=data_value, color=locationdesc, group=locationdesc))+
+#   geom_line()+
+#   geom_point()
+# 
+# brfss_NY_2010 = 
+#   over_health %>% 
+#   filter(year == '2010', locationabbr == "NY")
+# 
+# p2 = ggplot(brfss_NY_2010,aes(x=response, y=data_value, color=locationdesc, group=locationdesc))+
+#   geom_line()+
+#   geom_point()
+# grid.arrange(p1,p2, nrow = 2)
+
+```
+
+```{r}
+# 2-panel plot with two years data.
+
+brfss_NY_2006_and_2010 = 
+  over_health %>% 
+  filter(year == c("2006", "2010"), locationabbr == "NY") 
+
+p3 = ggplot(brfss_NY_2006_and_2010,aes(x=response, y=data_value, color=locationdesc, group=locationdesc))+
+  geom_line()+
+  geom_point()+
+  facet_grid(~year)
+p3
+```
+
+
+# Problem 3 
+## Part 1 
+```{r}
+# Load the data and clean it a little bit 
+accelerometers = read_csv("./data/accel_data.csv")%>%
+  janitor::clean_names() %>% 
+  mutate(weeday_weekend = 
+           ifelse(day == "Saturday"| day == "Sunday", "weekend", "weekday")) %>% 
+ 
+  # create proper variable and pivot the table to be readable. 
+   pivot_longer(
+    starts_with("activity_"),
+    names_to = "activity_minutes",
+    names_prefix = "activity_",
+    values_to = "activity_counts"
+  ) %>% 
+  mutate(activity_minutes = factor(activity_minutes,
+         levels = c(1:1440)))
+
+
+## make a table showing the total activity
+total_table = 
+  accelerometers %>% 
+  group_by(week, day_id, day) %>% 
+  summarise(total = sum(activity_counts)) %>% 
+  mutate(day = factor(day, ordered = TRUE, levels = c("Sunday", "Saturday", "Friday", "Thursday", "Wednesday", "Tuesday", "Monday")))
+
+## make a plot 
+ggplot(accelerometers, aes(x = week, y = activity_counts, fill = day ))+
+  geom_bar(stat = "identity", position = position_dodge())+
+  ylab("Total account")
+# this plot shows the number of acctivity change along the week 
+
+# or this plot 
+accelerometers %>% 
+  select(activity_minutes, day_id,day, activity_counts) %>% 
+  ggplot(aes(x=activity_minutes, y=activity_counts, color=day))+
+  scale_x_discrete(breaks=seq(60,1440,60), labels=as.character(c(1:24)))+
+  geom_point()+
+  labs(x="Activity hours", y="Activity counts", title="24 hour activity time courses for each day")
+
+# This plot shows the number of acctivity change for each day's 24 hours 
+```
+
+
