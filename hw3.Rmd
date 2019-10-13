@@ -15,6 +15,11 @@ library(gridExtra)
 ```
 
 # Problem 1 
+
+The instacart dataset contains `r nrow(instacart)` observations and `r ncol(instacart)` variables. This is a (`r dim(instacart)`) dataframe, containing data related to orders from the instacart website. There are both numeric variables such as ID and orer number, character variables such as product names, and logical variable.  
+
+The key variables are `order_id` (id of the order), `product_id`( each item in each order), `user_id`(the user), `aisle_id` and `aisle` (the aisle for different products). 
+
 ```{r}
 # Load the data
 library(p8105.datasets)
@@ -23,7 +28,8 @@ data("brfss_smart2010")
 ```
 
 ## Part 1 
-The 'aisle' is ranged from 0-135, so there are 135 different aisles. And aisle 83 is odered the most. 
+The 'aisle' is ranged from 0-135, so there are 135 different aisles. And aisle 83 is odered the most. (id=83,number=150609)
+
 
 ```{r}
 # Find the max by counting number of each aisle group. 
@@ -94,13 +100,14 @@ apple = instacart %>%
   filter(product_name %like% "Pink Lady Apples") %>% 
   group_by(order_dow) %>% 
   summarise(mean_hour = mean(order_hour_of_day)) %>% 
-  mutate(product = "Pink Lady Apples")
-
+  mutate(product = "Pink Lady Apples") 
+   
 ice_cream = instacart %>%
   filter(product_name %like% "Coffee Ice Cream") %>% 
   group_by(order_dow) %>% 
   summarise(mean_hour = mean(order_hour_of_day)) %>% 
   mutate(product = "Coffee Ice Cream")
+  
 
 # combine the mean
 mean_hour_two_product = rbind(apple, ice_cream)
@@ -111,9 +118,20 @@ mean_hour_table =
   id_cols = "product",
   names_from = "order_dow",
   values_from = "mean_hour"
-)
+) %>% 
+  rename("Sun" = '0', 
+         "Mon" = '1', 
+         "Tue" = '2', 
+         "Wed" = '3', 
+         "Thu" = '4', 
+         "Fri" = '5', 
+         "Sat" = '6') %>% 
+  knitr::kable(align = 'c', digits = 2)
 
 ```
+
+They are placed around 11:00 and 15:00 every day. 
+Sales should increase the advertising frequency of these two products on the website at this time.
 
 # Problem 2 
 ## Part 1 
@@ -194,6 +212,9 @@ ggplot(brfss_excellent, aes(x = year, y = avg, color = state )) + geom_line()
 
 ```
 
+We can see that the data in most of the states fluctuate from 2002 to 2010, basically the same as before.
+
+
 ```{r}
 # 2-panel plot with two years data.
 
@@ -208,6 +229,7 @@ p3 = ggplot(brfss_NY_2006_and_2010,aes(x=response, y=data_value, color=locationd
 p3
 ```
 
+From the plot, the value of good and very good in 2010 increased significantly with improvment in healthcare. "Very Good" had the highest proportion across years, "Good", "Excellent", "Fair" followed, and "Poor" had the lowest proportion. "Excellent" is most from New York County and "Very good" is most from Westchester County.
 
 # Problem 3 
 ## Part 1 
@@ -236,10 +258,12 @@ total_table =
   summarise(total = sum(activity_counts)) %>% 
   mutate(day = factor(day, ordered = TRUE, levels = c("Sunday", "Saturday", "Friday", "Thursday", "Wednesday", "Tuesday", "Monday")))
 
+
 ## make a plot 
 ggplot(accelerometers, aes(x = week, y = activity_counts, fill = day ))+
   geom_bar(stat = "identity", position = position_dodge())+
   ylab("Total account")
+
 # this plot shows the number of acctivity change along the week 
 
 # or this plot 
@@ -252,5 +276,13 @@ accelerometers %>%
 
 # This plot shows the number of acctivity change for each day's 24 hours 
 ```
+
+For this dataset, there are `r nrow(accelerometers)` observations and `r ncol(accelerometers)` variables. Variables include `r colnames(accelerometers)`. This 63-year-old male's “activity counts” was recorded every minute of hours for 5 weeks. Key variables are `activity_minutes` and `activity_counts`.
+
+The trends in the table is not clear. `total` is up and down. On day 24 and 31 (Saturday), activity counts are extremely low. Since those days are Saturday, we can guess that he stay at couch for whole day. 
+
+The patient's activity counts are going up and down in a very dramatic way over a day.
+From 1 am to 6 am every day, which is the sleeping time, the activity counts are relatively low. From 7 am to 11 am and 7 pm to 9 pm every day, which working time, the activity counts are relatively high. The weedends and the weekdays have the same pattern. However, on Saturday he is either very active or not. To sum up, his activity is irrgular. 
+
 
 
